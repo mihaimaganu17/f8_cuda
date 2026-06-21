@@ -6,3 +6,4 @@
 
 # CMake build dir
 **/build
+**/Testing

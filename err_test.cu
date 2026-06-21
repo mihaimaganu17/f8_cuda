@@ -22,6 +22,9 @@ __global__ void k()
 
 int main()
 {
+        // Check the max TB cluster size
+        int clusterSize = 0;
+        cudaOccupancyMaxPotentialClusterSize()
         k<<<8192, 4096>>>(); // Invalid block size
         CUDA_CHECK(cudaGetLastError());
         return 0;

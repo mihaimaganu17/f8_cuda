@@ -1,0 +1,2 @@
+[17:22:15.431][20040][CUDA][E] One or more of block dimensions of (4096,1,1) exceeds corresponding maximum value of (1024,1024,64)
+[17:22:15.431][20040][CUDA][E] Returning 1 (CUDA_ERROR_INVALID_VALUE) from cuLaunchKernel

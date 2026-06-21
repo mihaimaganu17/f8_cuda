@@ -35,10 +35,14 @@ void serialVecAdd(float* A, float* B, float* C, int len) {
     }
 }
 
-// Compared if the `left` and `right` vectors, both of length `len` are equal
-bool vectorApproximatelyEqual(float* left, float* right, int len) {
+// Compared if the `left` and `right` vectors, both of length `len` are equal based on the `epsilon`
+// precision
+bool vectorApproximatelyEqual(float* left, float* right, int len, float epsilon=0.00001) {
     for (int i = 0; i < len; i++) {
-        if (left[i] - right[i]) return false; 
+        if (left[i] - right[i] > epsilon) {
+            printf("Index %d mismatch: %f != %f\n", i, left[i], right[i]);
+            return false; 
+        }
     }
     return true;
 }

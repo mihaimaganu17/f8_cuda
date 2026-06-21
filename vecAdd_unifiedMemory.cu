@@ -48,6 +48,8 @@ bool vectorApproximatelyEqual(float* left, float* right, int len, float epsilon=
 }
 
 // Utility macro to check for cuda errors
+// TODO: This needs to become and error logging mechanism
+// TODO: error reporting is async, check https://docs.nvidia.com/cuda/cuda-programming-guide/02-basics/asynchronous-execution.html#asynchronous-execution-error-handling
 #define CUDA_CHECK(expr_to_check) do { \
     cudaError_t result = expr_to_check; \
     if (result != cudaSuccess) { \
@@ -56,8 +58,7 @@ bool vectorApproximatelyEqual(float* left, float* right, int len, float epsilon=
             __FILE__, \
             __LINE__, \
             result, \
-            cudaGetErrorString(result) \
-        ); \
+            cudaGetErrorString(result)); \
     } \
 } while (0)
 
@@ -140,15 +141,21 @@ int main() {
     // We chose the number of blocks, by rounding up a multiple of `threads` above vecLen.
     // Extra threads in a block that do no work does not incur a large overhead cost.
     blocks = (vecLen + (threads - 1)) / threads;
+    // Launch kernel
     vecAdd<<<blocks, threads>>>(devA, devB, devC, vecLen);
+    // Kernel launches do not return error, so we much check if kernel launch parameters and
+    // execution configuration passed successfuly. Since async operations in the CUDA runtime are
+    // async, a success result does not guarantee a successful kernel launch or execution.
+    CUDA_CHECK(cudaPeekAtLastError());
+
     // Wait for the device (kernel) to complete execution.
-    cudaDeviceSynchronize();
+    CUDA_CHECK(cudaDeviceSynchronize());
     // Another basic mechanism for synchronization at the block level is the `__syncthreads()`
     // Syncs between TBs is supported in TB clusters through Cooperative Groups APIs
     // Best perf is achieved with sync within a thread block.
 
     // Copy the result from device back to device
-    cudaMemcpy(C, devC, vecLen*sizeof(float), cudaMemcpyDeviceToHost);
+    CUDA_CHECK(cudaMemcpy(C, devC, vecLen*sizeof(float), cudaMemcpyDeviceToHost));
 
     // Perform computation serially on CPU for comparison
     // This could be moved before waiting for the result.

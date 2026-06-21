@@ -24,7 +24,7 @@ def vec_add(A, B, C):
     C[elemIdx] = A[elemIdx] + B[elemIdx]
 
 
-def main():
+def launch_with_block_size(block_size = 256):
     # Launch the kernel - A TB may contain up to 1024 threads. More than one TB can be schedules on
     # an SM simultaneously.
     # my_kernel[num_thread_blocks, threads_per_block](in_array, out_array)
@@ -44,7 +44,6 @@ def main():
     # Stores the result - create the same shape as `a`
     c = cp.zeros_like(a)
 
-    block_size = 256
     grid_size = int(np.ceil(vector_size/block_size))
     vec_add[grid_size, block_size](a, b, c)
 
@@ -64,6 +63,16 @@ def main():
 
     # Print diagnostics and abort
     print("Test succeeded")
+
+
+def main():
+    # Good example
+    launch_with_block_size(256)
+    # Example with error on purpose
+    try:
+        launch_with_block_size(2048)
+    except Exception as e:
+        print(f"Exception occured: {e}")
 
 
 if __name__ == "__main__":

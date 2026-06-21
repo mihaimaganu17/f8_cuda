@@ -47,19 +47,19 @@ bool vectorApproximatelyEqual(float* left, float* right, int len, float epsilon=
     return true;
 }
 
-void cudaMallocChecked(float **devPtr, size_t size) {
-    cudaError_t err = cudaMalloc(devPtr, size);
-    if (err != cudaSuccess) {
-        printf("CUDA error: %s\n", cudaGetErrorString(err));
-    }
-}
-
-void cudaMallocHostChecked(float **ptr, size_t size) {
-    cudaError_t err = cudaMallocHost(ptr, size);
-    if (err != cudaSuccess) {
-        printf("CUDA error: %s\n", cudaGetErrorString(err));
-    }
-}
+// Utility macro to check for cuda errors
+#define CUDA_CHECK(expr_to_check) do { \
+    cudaError_t result = expr_to_check; \
+    if (result != cudaSuccess) { \
+        fprintf(stderr, \
+            "CUDA Runtime Error: %s.%i:%d = %s\n", \
+            __FILE__, \
+            __LINE__, \
+            result, \
+            cudaGetErrorString(result) \
+        ); \
+    } \
+} while (0)
 
 // Number of threads that will execute the kernel in parallel is specified as part of the kernel
 // launch. Different invocations of the same kernel may use different execution configurations such
@@ -116,18 +116,18 @@ int main() {
     */
 
     // Allocate memory on host CPU
-    cudaMallocHostChecked(&A, vecLen*sizeof(float));
-    cudaMallocHostChecked(&B, vecLen*sizeof(float));
-    cudaMallocHostChecked(&C, vecLen*sizeof(float));
+    CUDA_CHECK(cudaMallocHost(&A, vecLen*sizeof(float)));
+    CUDA_CHECK(cudaMallocHost(&B, vecLen*sizeof(float)));
+    CUDA_CHECK(cudaMallocHost(&C, vecLen*sizeof(float)));
 
     // Initialize vectors on the host
     initArray(A, vecLen);
     initArray(B, vecLen);
 
     // Allocate memory on device GPU
-    cudaMallocChecked(&devA, vecLen*sizeof(float));
-    cudaMallocChecked(&devB, vecLen*sizeof(float));
-    cudaMallocChecked(&devC, vecLen*sizeof(float));
+    CUDA_CHECK(cudaMalloc(&devA, vecLen*sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&devB, vecLen*sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&devC, vecLen*sizeof(float)));
 
     // Copy host vecs to device
     cudaMemcpy(devA, A, vecLen*sizeof(float), cudaMemcpyHostToDevice);
@@ -141,8 +141,11 @@ int main() {
     // Extra threads in a block that do no work does not incur a large overhead cost.
     blocks = (vecLen + (threads - 1)) / threads;
     vecAdd<<<blocks, threads>>>(devA, devB, devC, vecLen);
-    // Wait for the device (kernel) to complete execution
+    // Wait for the device (kernel) to complete execution.
     cudaDeviceSynchronize();
+    // Another basic mechanism for synchronization at the block level is the `__syncthreads()`
+    // Syncs between TBs is supported in TB clusters through Cooperative Groups APIs
+    // Best perf is achieved with sync within a thread block.
 
     // Copy the result from device back to device
     cudaMemcpy(C, devC, vecLen*sizeof(float), cudaMemcpyDeviceToHost);

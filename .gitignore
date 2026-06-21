@@ -7,3 +7,6 @@
 # CMake build dir
 **/build
 **/Testing
+
+# UV artifacts
+**/.venv

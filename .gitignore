@@ -1,3 +1,8 @@
 .vscode
 **/*.exe
+
+# Rust build dir
 **/target
+
+# CMake build dir
+**/build
